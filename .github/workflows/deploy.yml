@@ -1,0 +1,45 @@
+# 簡單的靜態網頁部屬工作流
+name: Deploy DRL Dashboard to Pages
+
+on:
+  # 在推送到 main 分支時觸發
+  push:
+    branches: ["main"]
+
+  # 允許從 Actions 標籤手動執行此工作流
+  workflow_dispatch:
+
+# 設置權限以允許部屬到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 允許只有一個並發部屬
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # 部屬工作
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps:deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/setup-pages@v4
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 只部屬 frontend 資料夾中的內容
+          path: './frontend'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

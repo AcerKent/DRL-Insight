@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CT DRL Analysis Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Manrope:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Load Plotly via CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- Load SheetJS for reading Excel files -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="background-effects">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation & Filters -->
+        <aside class="glass-panel sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <h1>DRL Insight</h1>
+            </div>
+
+            <div class="upload-section glass-panel-inner" id="drop-zone">
+                <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;">
+                <label for="file-input" class="upload-label">
+                    <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--accent-purple)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <span>上傳或拖曳 DoseReport.xlsx</span>
+                </label>
+                <div id="file-status" class="status-msg"></div>
+            </div>
+
+            <div class="filters-section" id="filters-container" style="display: none; flex-direction: column;">
+                <h3>Filters</h3>
+                
+                <div class="filter-group">
+                    <label for="group-select">分類依據 (Group By)</label>
+                    <select id="group-select" class="clinical-select">
+                        <option value="Acquisition Protocol">Acquisition Protocol</option>
+                        <option value="Target Region">Target Region</option>
+                        <option value="StudyDescription">StudyDescription</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <div class="filter-header-flex">
+                        <label>篩選項目 (Items)</label>
+                        <div class="filter-actions">
+                            <button id="btn-select-all" class="btn-text">全選</button>
+                            <span class="divider">|</span>
+                            <button id="btn-deselect-all" class="btn-text">全不選</button>
+                        </div>
+                    </div>
+                    <div id="category-checkboxes" class="checkbox-list custom-scroll">
+                        <!-- Dynamic checkboxes injected here -->
+                    </div>
+                </div>
+
+                <div class="filter-group" id="date-filter-group" style="display: none;">
+                    <!-- Date filtering can be implemented here -->
+                </div>
+
+            </div>
+            
+            <div class="sidebar-footer">
+                <p>CT Dose Reference Levels Analysis</p>
+                <p class="small">Clinical Edition v1.0</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="dashboard-header">
+                <h2>Overview Dashboard</h2>
+                <div class="date-badge" id="data-date-range">No Data Loaded</div>
+            </header>
+
+            <!-- Key Metrics -->
+            <section class="metrics-grid">
+                <div class="metric-card glass-panel group-hover">
+                    <div class="metric-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg></div>
+                    <div class="metric-data">
+                        <span class="metric-label">總事件數 (Events)</span>
+                        <h3 class="metric-value" id="val-events">--</h3>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel group-hover">
+                    <div class="metric-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+                    <div class="metric-data">
+                        <span class="metric-label">平均 CTDIvol (mGy)</span>
+                        <h3 class="metric-value" id="val-ctdi">--</h3>
+                    </div>
+                </div>
+                <div class="metric-card glass-panel group-hover">
+                    <div class="metric-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                    <div class="metric-data">
+                        <span class="metric-label">平均 DLP (mGy.cm)</span>
+                        <h3 class="metric-value" id="val-dlp">--</h3>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Area -->
+            <div class="charts-container" id="charts-wrapper" style="opacity: 0.2; pointer-events: none;">
+                
+                <div class="chart-tabs">
+                    <div class="tab-header">
+                        <button class="tab-btn active" data-target="tab-histogram">📊 直方圖</button>
+                        <button class="tab-btn" data-target="tab-boxplot">📦 箱型圖</button>
+                        <button class="tab-btn" data-target="tab-line">📈 趨勢圖</button>
+                    </div>
+
+                    <div class="tab-content">
+                        <!-- Histogram Tab -->
+                        <div class="tab-pane active" id="tab-histogram">
+                            <div class="chart-row">
+                                <div class="chart-card glass-panel">
+                                    <div class="chart-header">
+                                        <h3>CTDIvol 平均值、Q2 及 Q3 (依 Protocol)</h3>
+                                    </div>
+                                    <div id="plot-ctdi-hist" class="plotly-container"></div>
+                                </div>
+                                <div class="chart-card glass-panel mt">
+                                    <div class="chart-header">
+                                        <h3>DLP 平均值、Q2 及 Q3 (依 Protocol)</h3>
+                                    </div>
+                                    <div id="plot-dlp-hist" class="plotly-container"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Boxplot Tab -->
+                        <div class="tab-pane" id="tab-boxplot">
+                            <div class="chart-row">
+                                <div class="chart-card glass-panel">
+                                    <div class="chart-header">
+                                        <h3>CTDIvol 各分類箱型圖</h3>
+                                    </div>
+                                    <div id="plot-ctdi-box" class="plotly-container"></div>
+                                </div>
+                                <div class="chart-card glass-panel mt">
+                                    <div class="chart-header">
+                                        <h3>DLP 各分類箱型圖</h3>
+                                    </div>
+                                    <div id="plot-dlp-box" class="plotly-container"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Line/Trend Tab -->
+                        <div class="tab-pane" id="tab-line">
+                            <div class="chart-row">
+                                <div class="chart-card glass-panel">
+                                    <div class="chart-header">
+                                        <h3>CTDIvol 數據隨時間趨勢 (Mean/Q2/Q3)</h3>
+                                    </div>
+                                    <div id="plot-ctdi-line" class="plotly-container"></div>
+                                </div>
+                                <div class="chart-card glass-panel mt">
+                                    <div class="chart-header">
+                                        <h3>DLP 數據隨時間趨勢 (Mean/Q2/Q3)</h3>
+                                    </div>
+                                    <div id="plot-dlp-line" class="plotly-container"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
