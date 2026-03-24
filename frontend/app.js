@@ -90,11 +90,11 @@ fileInput.addEventListener('change', (e) => {
 // File Handling & Parsing
 function handleFile(file) {
     if(!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-        fileStatus.textContent = '❌ 請上傳有效的 Excel (.xlsx) 檔案';
+        fileStatus.textContent = '❌ 請上傳 Excel (.xlsx) 格式檔案';
         return;
     }
 
-    fileStatus.textContent = `⏳ 解析中: ${file.name}...`;
+    fileStatus.textContent = `⏳ 正在讀取 ${file.name}...`;
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -171,7 +171,7 @@ function handleFile(file) {
                 window.studyLWCTDI[fname] = sumL > 0 ? sumCL / sumL : null;
             });
 
-            fileStatus.textContent = `✅ 成功讀取 ${globalData.length} 筆紀錄`;
+            fileStatus.textContent = `✅ 成功讀取 ${globalData.length} 筆紀錄`;
             filtersContainer.style.display = 'flex';
             chartsWrapper.style.opacity = '1';
             chartsWrapper.style.pointerEvents = 'all';
@@ -181,7 +181,7 @@ function handleFile(file) {
 
         } catch (err) {
             console.error(err);
-            fileStatus.textContent = '❌ 解析 Excel 失敗 (詳見開發者工具主控台)';
+            fileStatus.textContent = '❌ 解析 Excel 失敗 (詳見開發者工具主控台)';
         }
     };
     reader.readAsArrayBuffer(file);
@@ -205,7 +205,7 @@ document.getElementById('btn-deselect-all').addEventListener('click', () => {
     updateActiveFilters();
 });
 
-// Render Dynamic Checkboxes (Tree Structure)
+// Render Dynamic Checkboxes (Flat List)
 function renderCheckboxes() {
     if (globalData.length === 0) return;
     
@@ -214,119 +214,32 @@ function renderCheckboxes() {
     globalData.forEach(r => uniqueCats.add(r[currentGroup]));
     const sortedCats = Array.from(uniqueCats).sort();
     
-    // 2. Build Tree Structure
-    const tree = {};
     activeFilters.clear();
-    
-    sortedCats.forEach(cat => {
-        activeFilters.add(cat); // Default all leaf nodes to active
-        // Split by standard dash, full-width dash, or underscore
-        const parts = cat.split(/[-－_]/).map(s => s.trim()).filter(s => s);
-        
-        // If it can't be split, or only has 1 part, put it in root
-        if(parts.length <= 1) {
-            tree[cat] = { _isLeaf: true, originalValue: cat };
-            return;
-        }
-
-        // Build nested object
-        let currentLevel = tree;
-        for(let i=0; i<parts.length; i++) {
-            const part = parts[i];
-            if(i === parts.length - 1) {
-                // Leaf node
-                currentLevel[part] = { _isLeaf: true, originalValue: cat };
-            } else {
-                // Folder node
-                if(!currentLevel[part]) currentLevel[part] = {};
-                currentLevel = currentLevel[part];
-            }
-        }
-    });
-
-    // 3. Render Tree HTML Recursive
     categoryCheckboxes.innerHTML = '';
     
-    function buildNode(container, nodeMap, parentPath = '') {
-        const keys = Object.keys(nodeMap).filter(k => k !== '_isLeaf' && k !== 'originalValue').sort();
+    // 2. Render flat checkbox for each category
+    sortedCats.forEach(cat => {
+        activeFilters.add(cat); // Default all to active
         
-        keys.forEach(key => {
-            const node = nodeMap[key];
-            
-            if(node._isLeaf) {
-                // Render standard Leaf Checkbox
-                const label = document.createElement('label');
-                label.className = 'checkbox-item';
-                
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'cat-checkbox leaf-checkbox';
-                cb.value = node.originalValue;
-                cb.checked = true;
-                
-                cb.addEventListener('change', updateActiveFilters);
-                
-                label.appendChild(cb);
-                label.appendChild(document.createTextNode(key)); // Show only the final part name
-                container.appendChild(label);
-            } else {
-                // Render Folder (details/summary)
-                const details = document.createElement('details');
-                details.open = false; // Default collapsed as requested by user
-                
-                const summary = document.createElement('summary');
-                
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'cat-checkbox folder-checkbox';
-                cb.checked = true;
-                
-                // Clicking the folder checkbox toggles all its children
-                cb.addEventListener('change', (e) => {
-                    e.stopPropagation(); // Don't trigger details toggle
-                    const isChecked = e.target.checked;
-                    const childBoxes = details.querySelectorAll('.leaf-checkbox');
-                    childBoxes.forEach(childCb => {
-                        childCb.checked = isChecked;
-                    });
-                    // Also update nested folder checkboxes
-                    details.querySelectorAll('.folder-checkbox').forEach(fcb => {
-                       fcb.checked = isChecked;
-                    });
-                    updateActiveFilters();
-                });
-
-                // Prevent details toggle when clicking checkbox
-                cb.addEventListener('click', e => e.stopPropagation());
-
-                summary.appendChild(cb);
-                const titleSpan = document.createElement('span');
-                titleSpan.textContent = key;
-                titleSpan.style.fontWeight = 'bold';
-                summary.appendChild(titleSpan);
-                
-                details.appendChild(summary);
-                
-                // Container for children
-                const groupDiv = document.createElement('div');
-                groupDiv.className = 'tree-group';
-                
-                // Recurse
-                buildNode(groupDiv, node);
-                
-                details.appendChild(groupDiv);
-                container.appendChild(details);
-            }
-        });
-    }
-
-    buildNode(categoryCheckboxes, tree);
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'cat-checkbox';
+        cb.value = cat;
+        cb.checked = true;
+        cb.addEventListener('change', updateActiveFilters);
+        
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(cat));
+        categoryCheckboxes.appendChild(label);
+    });
 }
 
 function updateActiveFilters() {
     activeFilters.clear();
-    // Only target leaf checkboxes, as they hold the actual 'originalValue' representing the full category name
-    document.querySelectorAll('.leaf-checkbox:checked').forEach(cb => {
+    document.querySelectorAll('.cat-checkbox:checked').forEach(cb => {
         activeFilters.add(cb.value);
     });
     
@@ -470,7 +383,7 @@ function updateDashboard() {
 
     // --- Render Histograms (Mean with Q2 and Q3 overlaid as points) ---
     Plotly.newPlot('plot-ctdi-hist', [
-        { x: avgCtdiX, y: avgCtdiY_Mean, type: 'bar', name: '平均值 (Mean)', marker: { color: 'rgba(59, 130, 246, 0.3)', line: {color: colors.blue, width: 1} } },
+        { x: avgCtdiX, y: avgCtdiY_Mean, type: 'bar', name: '加權平均 (LW Mean)', marker: { color: 'rgba(59, 130, 246, 0.3)', line: {color: colors.blue, width: 1} } },
         { x: avgCtdiX, y: avgCtdiY_Q2, type: 'scatter', mode: 'markers', name: 'P50 (Q2)', marker: { symbol: 'diamond', size: 10, color: colors.teal } },
         { x: avgCtdiX, y: avgCtdiY_Q3, type: 'scatter', mode: 'markers', name: 'P75 (Q3)', marker: { symbol: 'line-ew', size: 16, line: { color: '#ffffff', width: 2 } } }
     ], Object.assign({}, plotLayoutBase, {
@@ -551,7 +464,7 @@ function updateDashboard() {
             // For clarity, we only add markers/lines for Mean, and maybe subtle lines for others
             // Or just add all three. Let's add all three with consistent naming.
             traces.push({
-                x: x, y: y_mean, mode: 'lines+markers', name: `${cat} (Mean)`,
+                x: x, y: y_mean, mode: 'lines+markers', name: `${cat} (LW Mean)`,
                 line: {shape: 'spline', smoothing: 1.3}
             });
             traces.push({
@@ -576,3 +489,4 @@ function updateDashboard() {
         yaxis: { ...plotLayoutBase.yaxis, title: 'DLP (mGy.cm)' }
     }), {responsive: true});
 }
+
