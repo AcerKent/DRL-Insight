@@ -490,3 +490,78 @@ function updateDashboard() {
     }), {responsive: true});
 }
 
+// Function to open chart in a new tab standalone
+function openChartInNewTab(chartId, titleStr) {
+    const gd = document.getElementById(chartId);
+    if (!gd || !gd.data || gd.data.length === 0) return;
+
+    // Deep clone data and layout to avoid referencing issues
+    const data = JSON.parse(JSON.stringify(gd.data));
+    const layout = JSON.parse(JSON.stringify(gd.layout));
+    
+    // Adjust layout for a full-page view
+    layout.width = window.innerWidth * 0.9;
+    layout.height = window.innerHeight * 0.85;
+    layout.paper_bgcolor = '#0B0F19';
+    layout.plot_bgcolor = '#0B0F19';
+    layout.font = { color: '#E2E8F0', family: 'Inter, sans-serif' };
+
+    const newWin = window.open('', '_blank');
+    if (!newWin) {
+        alert("請允許瀏覽器彈出新視窗！");
+        return;
+    }
+
+    newWin.document.write(`
+        <!DOCTYPE html>
+        <html lang="zh-TW">
+        <head>
+            <meta charset="UTF-8">
+            <title>${titleStr} - DRL Dashboard</title>
+            <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 20px;
+                    background-color: #0B0F19;
+                    color: white;
+                    font-family: 'Inter', sans-serif;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                }
+                h1 {
+                    font-size: 1.5rem;
+                    font-weight: 500;
+                    margin-bottom: 20px;
+                }
+                #plot-container {
+                    width: 90vw;
+                    height: 85vh;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>${titleStr}</h1>
+            <div id="plot-container"></div>
+            <script>
+                const data = ${JSON.stringify(data)};
+                const layout = ${JSON.stringify(layout)};
+                const config = { responsive: true, displayModeBar: true };
+                Plotly.newPlot('plot-container', data, layout, config);
+                
+                // Keep chart sized to window
+                window.addEventListener('resize', () => {
+                    Plotly.relayout('plot-container', {
+                        width: window.innerWidth * 0.9,
+                        height: window.innerHeight * 0.85
+                    });
+                });
+            </script>
+        </body>
+        </html>
+    `);
+    newWin.document.close();
+}

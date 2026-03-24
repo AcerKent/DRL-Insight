@@ -532,12 +532,34 @@ details[open] > summary::before {
 
 .chart-header {
     margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .chart-header h3 {
     font-size: 1.2rem;
     font-weight: 400;
     color: var(--text-primary);
+    margin: 0;
+}
+
+.btn-expand {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-expand:hover {
+    color: var(--accent-teal);
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .plotly-container {
