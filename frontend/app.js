@@ -115,8 +115,11 @@ function handleFile(file) {
                 protocol: findCol(['AcquisitionProtocol', 'Protocol', 'ExamName', 'Procedure']),
                 region: findCol(['TargetRegion', 'Region', 'BodyPart', 'Location']),
                 description: findCol(['StudyDescription', 'Description']),
+                manufacturer: findCol(['Manufacturer', 'Make', 'Brand', 'Vendor']),
                 ctdi: findCol(['MeanCTDIvol', 'CTDIvol', 'CTDI']),
                 dlp: findCol(['DLP', 'TotalDLP']),
+                scanLength: findCol(['ScanningLength', 'ScanLength', 'Length']),
+                filename: findCol(['FilePath', 'FileName', 'File Name', 'SeriesFile', 'StudyUID', 'Filename', 'Name']),
                 date: findCol(['StudyDate', 'Study Date', 'Date', 'ExaminationDate', 'ExamDate', 'ReportDate'])
             };
 
@@ -125,10 +128,13 @@ function handleFile(file) {
                 row['Acquisition Protocol'] = String(row[colMap.protocol] || 'Unknown').trim();
                 row['Target Region'] = String(row[colMap.region] || 'Unknown').trim();
                 row['StudyDescription'] = String(row[colMap.description] || 'Unknown').trim();
+                row['Manufacturer'] = String(row[colMap.manufacturer] || 'Unknown').trim();
                 
                 // 2. Numeric parsing
                 row['Mean CTDIvol (mGy)'] = parseFloat(row[colMap.ctdi]) || null;
                 row['DLP (mGy.cm)'] = parseFloat(row[colMap.dlp]) || null;
+                row['_scanLength'] = parseFloat(row[colMap.scanLength]) || null;
+                row['_filename'] = colMap.filename ? String(row[colMap.filename] || '').trim() : '';
                 
                 // 3. Date Parsing
                 let dateStr = row[colMap.date] ? String(row[colMap.date]).trim() : '';
@@ -143,6 +149,27 @@ function handleFile(file) {
                 }
                 return row;
             }).filter(row => row['Mean CTDIvol (mGy)'] !== null || row['DLP (mGy.cm)'] !== null);
+
+            // --- Compute per-study LW-CTDIv ---
+            // Group series rows by filename, then compute length-weighted CTDIvol for each study
+            const studyAccum = {}; // { filename: { sumCL: 0, sumL: 0, rows: [] } }
+            globalData.forEach(row => {
+                const fname = row['_filename'] || `__nofile_${Math.random()}`;
+                if (!studyAccum[fname]) studyAccum[fname] = { sumCL: 0, sumL: 0 };
+                const ctdi = row['Mean CTDIvol (mGy)'];
+                const len  = row['_scanLength'];
+                if (ctdi !== null && len !== null) {
+                    studyAccum[fname].sumCL += ctdi * len;
+                    studyAccum[fname].sumL  += len;
+                }
+            });
+
+            // studyLWCTDI: { filename -> LW-CTDIv value }
+            window.studyLWCTDI = {};
+            Object.keys(studyAccum).forEach(fname => {
+                const { sumCL, sumL } = studyAccum[fname];
+                window.studyLWCTDI[fname] = sumL > 0 ? sumCL / sumL : null;
+            });
 
             fileStatus.textContent = `✅ 成功讀取 ${globalData.length} 筆紀錄`;
             filtersContainer.style.display = 'flex';
@@ -357,15 +384,24 @@ function updateDashboard() {
         return sorted[lower] * (1 - weight) + sorted[upper] * weight;
     };
 
-    // 1. Update Metrics (Mean - as requested)
+    // 1. Update Summary Metrics
     document.getElementById('val-events').textContent = filteredData.length.toLocaleString();
     
-    const allCtdi = filteredData.filter(r => r['Mean CTDIvol (mGy)'] !== null).map(r => r['Mean CTDIvol (mGy)']);
+    // Collect unique per-study LW-CTDIv values from filtered data
+    const seenFilesAll = new Set();
+    const allLwCtdi = [];
+    filteredData.forEach(r => {
+        const fname = r['_filename'];
+        if (!seenFilesAll.has(fname)) {
+            seenFilesAll.add(fname);
+            const v = window.studyLWCTDI && window.studyLWCTDI[fname];
+            if (v != null) allLwCtdi.push(v);
+        }
+    });
     const allDlp = filteredData.filter(r => r['DLP (mGy.cm)'] !== null).map(r => r['DLP (mGy.cm)']);
-    
     const calculateMean = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 
-    document.getElementById('val-ctdi').textContent = allCtdi.length > 0 ? calculateMean(allCtdi).toFixed(2) : '--';
+    document.getElementById('val-ctdi').textContent = allLwCtdi.length > 0 ? calculateMean(allLwCtdi).toFixed(2) : '--';
     document.getElementById('val-dlp').textContent = allDlp.length > 0 ? calculateMean(allDlp).toFixed(2) : '--';
 
     // Update Date Badge
@@ -376,12 +412,22 @@ function updateDashboard() {
         document.getElementById('data-date-range').textContent = `${minDate} to ${maxDate}`;
     }
 
-    // Prepare Grouped Data
+    // Prepare Grouped Data (per-study LW-CTDIv deduplication)
     const groups = {};
+    const seenStudyPerCat = new Set(); // track (filename, category) pairs to avoid double-counting
     filteredData.forEach(row => {
         const g = row[currentGroup];
+        const fname = row['_filename'];
+        const studyKey = `${fname}||${g}`;
         if (!groups[g]) groups[g] = { ctdi: [], dlp: [] };
-        if (row['Mean CTDIvol (mGy)'] !== null) groups[g].ctdi.push(row['Mean CTDIvol (mGy)']);
+        
+        // LW-CTDIv: only add once per study per category
+        if (!seenStudyPerCat.has(studyKey)) {
+            seenStudyPerCat.add(studyKey);
+            const lwv = window.studyLWCTDI && window.studyLWCTDI[fname];
+            if (lwv != null) groups[g].ctdi.push(lwv);
+        }
+        // DLP: per series (keep existing behaviour)
         if (row['DLP (mGy.cm)'] !== null) groups[g].dlp.push(row['DLP (mGy.cm)']);
     });
 
@@ -430,7 +476,7 @@ function updateDashboard() {
     ], Object.assign({}, plotLayoutBase, {
         showlegend: true,
         legend: { font: {color: '#94A3B8'}, orientation: "h", y: 1.15 },
-        yaxis: { ...plotLayoutBase.yaxis, title: 'CTDIvol (mGy)' }
+        yaxis: { ...plotLayoutBase.yaxis, title: 'LW-CTDIv (mGy)' }
     }), {responsive: true});
 
     Plotly.newPlot('plot-dlp-hist', [
@@ -445,7 +491,7 @@ function updateDashboard() {
 
     // --- Render Boxplots ---
     Plotly.newPlot('plot-ctdi-box', boxCtdiData, Object.assign({}, plotLayoutBase, {
-        yaxis: { ...plotLayoutBase.yaxis, title: 'CTDIvol (mGy)' }, showlegend: false
+        yaxis: { ...plotLayoutBase.yaxis, title: 'LW-CTDIv (mGy)' }, showlegend: false
     }), {responsive: true});
 
     Plotly.newPlot('plot-dlp-box', boxDlpData, Object.assign({}, plotLayoutBase, {
@@ -462,11 +508,19 @@ function updateDashboard() {
         if (!row._timestamp) return;
         const g = row[currentGroup];
         const t = row._timestamp;
+        const fname = row['_filename'];
+        const studyTimeKey = `${fname}||${g}||${t}`;
         
-        if (row['Mean CTDIvol (mGy)'] !== null) {
-            if (!timeGroupsCtdi[g]) timeGroupsCtdi[g] = {};
-            if (!timeGroupsCtdi[g][t]) timeGroupsCtdi[g][t] = [];
-            timeGroupsCtdi[g][t].push(row['Mean CTDIvol (mGy)']);
+        // For LW-CTDIv trend: only add one data point per study per (category, date)
+        if (!window._trendSeen) window._trendSeen = new Set();
+        if (!window._trendSeen.has(studyTimeKey)) {
+            window._trendSeen.add(studyTimeKey);
+            const lwv = window.studyLWCTDI && window.studyLWCTDI[fname];
+            if (lwv != null) {
+                if (!timeGroupsCtdi[g]) timeGroupsCtdi[g] = {};
+                if (!timeGroupsCtdi[g][t]) timeGroupsCtdi[g][t] = [];
+                timeGroupsCtdi[g][t].push(lwv);
+            }
         }
         if (row['DLP (mGy.cm)'] !== null) {
             if (!timeGroupsDlp[g]) timeGroupsDlp[g] = {};
@@ -474,6 +528,7 @@ function updateDashboard() {
             timeGroupsDlp[g][t].push(row['DLP (mGy.cm)']);
         }
     });
+    window._trendSeen = null; // reset for next call
 
     const createLineTraces = (dataDict, baseName) => {
         const traces = [];
@@ -511,9 +566,9 @@ function updateDashboard() {
         return traces;
     };
 
-    Plotly.newPlot('plot-ctdi-line', createLineTraces(timeGroupsCtdi, 'CTDIvol'), Object.assign({}, plotLayoutBase, {
+    Plotly.newPlot('plot-ctdi-line', createLineTraces(timeGroupsCtdi, 'LW-CTDIv'), Object.assign({}, plotLayoutBase, {
         showlegend: true, legend: { font: {color: '#94A3B8'}, orientation: "h", y: -0.2 }, 
-        yaxis: { ...plotLayoutBase.yaxis, title: 'CTDIvol (mGy)' }
+        yaxis: { ...plotLayoutBase.yaxis, title: 'LW-CTDIv (mGy)' }
     }), {responsive: true});
 
     Plotly.newPlot('plot-dlp-line', createLineTraces(timeGroupsDlp, 'DLP'), Object.assign({}, plotLayoutBase, {

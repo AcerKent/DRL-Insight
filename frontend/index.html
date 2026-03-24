@@ -46,6 +46,7 @@
                         <option value="Acquisition Protocol">Acquisition Protocol</option>
                         <option value="Target Region">Target Region</option>
                         <option value="StudyDescription">StudyDescription</option>
+                        <option value="Manufacturer">Manufacturer</option>
                     </select>
                 </div>
 
@@ -94,7 +95,7 @@
                 <div class="metric-card glass-panel group-hover">
                     <div class="metric-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
                     <div class="metric-data">
-                        <span class="metric-label">平均 CTDIvol (mGy)</span>
+                        <span class="metric-label">平均 LW-CTDIv (mGy)</span>
                         <h3 class="metric-value" id="val-ctdi">--</h3>
                     </div>
                 </div>
@@ -123,13 +124,13 @@
                             <div class="chart-row">
                                 <div class="chart-card glass-panel">
                                     <div class="chart-header">
-                                        <h3>CTDIvol 平均值、Q2 及 Q3 (依 Protocol)</h3>
+                                        <h3>LW-CTDIv 平均值、Q2 及 Q3 (依分類)</h3>
                                     </div>
                                     <div id="plot-ctdi-hist" class="plotly-container"></div>
                                 </div>
                                 <div class="chart-card glass-panel mt">
                                     <div class="chart-header">
-                                        <h3>DLP 平均值、Q2 及 Q3 (依 Protocol)</h3>
+                                        <h3>DLP 平均值、Q2 及 Q3 (依分類)</h3>
                                     </div>
                                     <div id="plot-dlp-hist" class="plotly-container"></div>
                                 </div>
@@ -141,7 +142,7 @@
                             <div class="chart-row">
                                 <div class="chart-card glass-panel">
                                     <div class="chart-header">
-                                        <h3>CTDIvol 各分類箱型圖</h3>
+                                        <h3>LW-CTDIv 各分類箱型圖</h3>
                                     </div>
                                     <div id="plot-ctdi-box" class="plotly-container"></div>
                                 </div>
@@ -159,7 +160,7 @@
                             <div class="chart-row">
                                 <div class="chart-card glass-panel">
                                     <div class="chart-header">
-                                        <h3>CTDIvol 數據隨時間趨勢 (Mean/Q2/Q3)</h3>
+                                        <h3>LW-CTDIv 數據隨時間趨勢 (Mean/Q2/Q3)</h3>
                                     </div>
                                     <div id="plot-ctdi-line" class="plotly-container"></div>
                                 </div>
