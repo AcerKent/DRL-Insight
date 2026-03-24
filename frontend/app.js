@@ -90,11 +90,13 @@ fileInput.addEventListener('change', (e) => {
 // File Handling & Parsing
 function handleFile(file) {
     if(!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-        fileStatus.textContent = '❌ 請上傳 Excel (.xlsx) 格式檔案';
+        fileStatus.textContent = '❌ 請上傳 Excel (.xlsx) 格式檔案';
+
         return;
     }
 
-    fileStatus.textContent = `⏳ 正在讀取 ${file.name}...`;
+    fileStatus.textContent = `⏳ 正在讀取 ${file.name}...`;
+
 
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -171,7 +173,8 @@ function handleFile(file) {
                 window.studyLWCTDI[fname] = sumL > 0 ? sumCL / sumL : null;
             });
 
-            fileStatus.textContent = `✅ 成功讀取 ${globalData.length} 筆紀錄`;
+            fileStatus.textContent = `✅ 成功讀取 ${globalData.length} 筆紀錄`;
+
             filtersContainer.style.display = 'flex';
             chartsWrapper.style.opacity = '1';
             chartsWrapper.style.pointerEvents = 'all';
@@ -181,7 +184,8 @@ function handleFile(file) {
 
         } catch (err) {
             console.error(err);
-            fileStatus.textContent = '❌ 解析 Excel 失敗 (詳見開發者工具主控台)';
+            fileStatus.textContent = '❌ 解析 Excel 失敗 (詳見開發者工具主控台)';
+
         }
     };
     reader.readAsArrayBuffer(file);
@@ -450,30 +454,17 @@ function updateDashboard() {
             const sortedTimes = Object.keys(timeMap).map(Number).sort();
             const x = [];
             const y_mean = [];
-            const y_q2 = [];
-            const y_q3 = [];
-            
+                                    
             sortedTimes.forEach(time => {
                 const arr = timeMap[time];
                 x.push(new Date(time).toISOString().split('T')[0]);
                 y_mean.push(arr.reduce((a,b)=>a+b,0)/arr.length);
-                y_q2.push(getPercentile(arr, 0.5));
-                y_q3.push(getPercentile(arr, 0.75));
-            });
+                                            });
 
-            // For clarity, we only add markers/lines for Mean, and maybe subtle lines for others
-            // Or just add all three. Let's add all three with consistent naming.
-            traces.push({
+            // For clarity, we only add markers/lines for Mean
+                        traces.push({
                 x: x, y: y_mean, mode: 'lines+markers', name: `${cat} (LW Mean)`,
                 line: {shape: 'spline', smoothing: 1.3}
-            });
-            traces.push({
-                x: x, y: y_q2, mode: 'lines', name: `${cat} (Q2)`,
-                line: {dash: 'dash', width: 1, shape: 'spline'}
-            });
-            traces.push({
-                x: x, y: y_q3, mode: 'lines', name: `${cat} (Q3)`,
-                line: {dash: 'dot', width: 1, shape: 'spline'}
             });
         });
         return traces;
