@@ -23,12 +23,15 @@ It solves the core pain point of complex software setups and data privacy concer
 *   **🔒 100% Client-Side Processing (本地端隱私運算)**
     *   **EN:** All data extraction, parsing, and filtering occur entirely within your web browser. No backend server is required, meaning no patient data or hospital reports ever leave your computer.
     *   **TW:** 所有的 Excel 解析與過濾統計皆在瀏覽器端獨立完成，不需連接任何後端伺服器，100% 確保病患個資與醫院機密絕不外流。
-*   **📊 Advanced DRL Metrics Visualization (視覺化劑量指標)**
-    *   **EN:** Effectively aggregates and overlays `Mean`, `P50` (Median), and `P75` percentiles on interactive histograms to intuitively display radiation exposure deviations.
-    *   **TW:** 在動態長條圖上同時結合「平均值」與精準疊加的「P50 中位數」及「P75 百分位」標記點，協助您秒速揪出劑量超標的異常現象。
-*   **📈 Time-Series Trend Insights (自動化歷史趨勢分析)**
-    *   **EN:** Automatically extracts temporal data from `StudyDate` columns to plot continuous trend lines for both CTDIvol and DLP metric variations over time.
-    *   **TW:** 系統會自動抓取檢查日期欄位，並針對不同部位或掃描協定繪製連續的時間曲線，幫助使用者追蹤長期的輻射劑量變化軌跡。
+*   **📊 Length-Weighted CTDIvol (LW-CTDIv 加權平均劑量)**
+    *   **EN:** Calculates accurate study-level radiation dose by computing Length-Weighted CTDIvol (`Σ(CTDIvol × Length) / Σ(Length)`), rather than simple averages across series.
+    *   **TW:** 獨特的「加權平均 (LW-CTDIv)」演算法。系統會以掃描長度作為權重，自動將同一份 Study 下的不同 Series 精準統合成單一檢查指標，還原最真實的輻射暴露狀態。
+*   **📈 Advanced Visualizations (視覺化劑量指標庫)**
+    *   **EN:** Interactive Histograms, Boxplots, and Trend Lines charting `LW-CTDIv` and `DLP` variation over time. Charts feature an "Open in New Tab" button for full-screen detailed analysis.
+    *   **TW:** 內建互動式直方圖、箱型圖及時間趨勢圖。每張圖表更提供「在新分頁展開」按鈕，方便您全螢幕檢視細節並獨立匯出。
+*   **🔍 Rapid Flat Filtering (極速篩選介面)**
+    *   **EN:** Clean, flat-list checkboxes dynamically filter your data by Manufacturer, Region, or Protocol without needing complex nested menus.
+    *   **TW:** 扁平直觀的多選清單 (Flat List)，無論是依照設備廠牌 (Manufacturer)、部位 (Region) 或協定 (Protocol) 進行分組勾選，統計數據都會毫秒級連動更新。
 
 ---
 
@@ -39,13 +42,16 @@ It solves the core pain point of complex software setups and data privacy concer
 *   **⚡ Dose Metrics (必備劑量欄位)**: 
     *   `CTDIvol`, `Mean CTDIvol (mGy)`
     *   `DLP (mGy.cm)`, `Total DLP`
+    *   `ScanningLength`, `ScanLength`, `Length` (For LW-CTDIv weighting / 加權平均用)
 *   **📑 Categorization (必備分類欄位，至少一項)**: 
     *   `Acquisition Protocol`, `Protocol`, `ExamName`
     *   `Target Region`, `Region`, `BodyPart`
     *   `StudyDescription`, `Description`
+    *   `Manufacturer`, `Make`, `Brand` (支援儀器廠牌分類)
+*   **📁 Study Grouping (檢查分組欄位)**:
+    *   `FilePath`, `StudyUID`, `FileName` (用以辨認哪些紀錄屬於同一次檢查 Study)
 *   **📅 Time Series (自由選填日期欄位)**: 
     *   `StudyDate`, `Examination Date`, `Date`. 
-    *   Supports YYYY/MM/DD and DICOM plain format (`20240315`). (支援標準日期格式與醫療儀器常見的 YYYYMMDD 無符號格式)。
 
 ---
 
@@ -55,13 +61,15 @@ It solves the core pain point of complex software setups and data privacy concer
 1. **Export Data:** Export your CT dose reports from your hospital's system in Excel format (`.xlsx`).
 2. **Open Dashboard:** Navigate to the DRL Insight web page.
 3. **Upload File:** Drag and drop your Excel file into the designated upload zone on the left sidebar.
-4. **Interactive Filtering:** Use the collapsible tree checklist on the left to filter the data by Protocol, Region, or Description. The charts and metrics will instantly update in real-time.
+4. **Interactive Filtering:** Use the flat checkbox list on the left to filter the data by your chosen category (e.g., Manufacturer). The charts and metrics will instantly update in real-time.
+5. **Expand Charts:** Click the "↗️" arrow icon on the top right of any chart to pop it out into a standalone tab for detailed viewing or image export.
 
 ### **TW**
 1. **匯出資料:** 從院內系統將 CT 輻射劑量報告匯出為 Excel (`.xlsx`) 格式。
 2. **開啟網頁:** 進入 DRL Insight 網頁介面。
 3. **上傳報表:** 點擊左側上傳區塊，或直接將您的 Excel 檔案拖拉放進虛線框內。
-4. **互動統計:** 檔案讀取後，利用左下角的「樹狀多選清單」勾選關注的掃描部位或協定，右側的所有統計指標、直方圖、趨勢圖將會無縫連動運算，無須點擊任何額外的分析按鈕。
+4. **互動統計:** 檔案讀取後，利用左下角的「多選清單」勾選關注的廠牌、掃描部位或協定，右側的所有統計指標、直方圖、趨勢圖將會無縫連動運算。
+5. **圖表展開:** 若覺得預覽圖太小，可以點擊圖表右上方的「展開圖示 ↗️」，系統會另開一個新分頁全螢幕顯示該圖表，並保留所有互動功能！
 
 ---
 
