@@ -471,12 +471,14 @@ function updateDashboard() {
     };
 
     Plotly.newPlot('plot-ctdi-line', createLineTraces(timeGroupsCtdi, 'LW-CTDIv'), Object.assign({}, plotLayoutBase, {
-        showlegend: true, legend: { font: {color: '#94A3B8'}, orientation: "h", y: -0.2 }, 
+        showlegend: true, legend: { font: {color: '#94A3B8'}, orientation: "h", y: -0.2 },
+        xaxis: { ...plotLayoutBase.xaxis, type: 'date' },
         yaxis: { ...plotLayoutBase.yaxis, title: 'LW-CTDIv (mGy)' }
     }), {responsive: true});
 
     Plotly.newPlot('plot-dlp-line', createLineTraces(timeGroupsDlp, 'DLP'), Object.assign({}, plotLayoutBase, {
         showlegend: true, legend: { font: {color: '#94A3B8'}, orientation: "h", y: -0.2 },
+        xaxis: { ...plotLayoutBase.xaxis, type: 'date' },
         yaxis: { ...plotLayoutBase.yaxis, title: 'DLP (mGy.cm)' }
     }), {responsive: true});
 }
